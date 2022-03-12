@@ -12,10 +12,10 @@ using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.MountAndBlade.ViewModelCollection.HUD.KillFeed;
+using TaleWorlds.MountAndBlade.ViewModelCollection.HUD.KillFeed.Personal;
 
 namespace WarbandCasualtyLog
 {
-    [HarmonyPatch(typeof(SPKillFeedVM), "OnAgentRemoved")]
     internal class LogPatch
     {
 
@@ -29,27 +29,59 @@ namespace WarbandCasualtyLog
          * Cancel main method call by returning false, don't want the normal log to display.
          * In future would be best to add a separate option from "Report Casualties", but haven't quite figured that out yet.
          */
-        public static bool Prefix(ref Agent affectedAgent, ref Agent affectorAgent)
+        [HarmonyPatch(typeof(SPKillFeedVM), "OnAgentRemoved")]
+        public class OnAgentRemovedPatch
         {
-            var itemVM = new SPMissionKillNotificationItemVM(affectedAgent, affectorAgent, null, null);
+            public static bool Prefix(ref Agent affectedAgent, ref Agent affectorAgent, bool isHeadshot)
+            {
+                var builder = new StringBuilder();
+                builder.Append(affectedAgent.Name);
 
-            var builder = new StringBuilder();
-            builder.Append(affectedAgent.Name);
+                builder.Append(affectedAgent.State == AgentState.Unconscious ? " knocked unconscious by " : " killed by ");
 
-            builder.Append(affectedAgent.State == AgentState.Unconscious ? " knocked unconscious by " : " killed by ");
-
-            builder.Append(affectorAgent.Name);
-            InformationManager.DisplayMessage(new InformationMessage(builder.ToString(), GetColor(affectedAgent, affectedAgent.State == AgentState.Unconscious)));
-            return false;
+                builder.Append(affectorAgent.Name);
+                InformationManager.DisplayMessage(new InformationMessage(builder.ToString(), GetColor(affectedAgent, affectedAgent.State == AgentState.Unconscious)));
+                return false;
+            }
         }
 
-        public static void loadConfigValues()
+        [HarmonyPatch(typeof(SPKillFeedVM), "OnPersonalKill")]
+        public class OnPersonalKillPatch
         {
-            CYAN = Color.ConvertStringToColor(WarbandConfig.FriendlyKill);
-            ORANGE = Color.ConvertStringToColor(WarbandConfig.FriendlyUnconscious);
-            RED = Color.ConvertStringToColor(WarbandConfig.FriendlyKilled);
-            PURPLE = Color.ConvertStringToColor(WarbandConfig.AllyKilled);
-            LIGHT_PURPLE = Color.ConvertStringToColor(WarbandConfig.AllyUnconscious);
+            public static bool Prefix(int damageAmount, bool isMountDamage, bool isFriendlyFire, bool isHeadshot, string killedAgentName, bool isUnconscious)
+            {
+                var builder = new StringBuilder();
+
+                builder.Append("Delivered damage ");
+                builder.Append(damageAmount);
+
+                InformationManager.DisplayMessage(new InformationMessage(builder.ToString()));
+                return false;
+            }
+        }
+
+        [HarmonyPatch(typeof(SPKillFeedVM), "OnPersonalDamage")]
+        public class OnPersonalDamagePatch
+        {
+            public static bool Prefix(int totalDamage, bool isVictimAgentMount, bool isFriendlyFire, string victimAgentName)
+            {
+                var builder = new StringBuilder();
+
+                builder.Append("Delivered damage ");
+                builder.Append(totalDamage);
+
+                InformationManager.DisplayMessage(new InformationMessage(builder.ToString()));
+                return false;
+            }
+        }
+
+        public static void LoadConfigValues()
+        {
+            CYAN = Color.ConvertStringToColor(WarbandCasualtyLog.SubModule.DefaultFriendlyKill);
+            ORANGE = Color.ConvertStringToColor(WarbandCasualtyLog.SubModule.DefaultFriendlyUnconscious);
+            RED = Color.ConvertStringToColor(WarbandCasualtyLog.SubModule.DefaultFriendlyKilled);
+            PURPLE = Color.ConvertStringToColor(WarbandCasualtyLog.SubModule.DefaultAllyKilled);
+            LIGHT_PURPLE = Color.ConvertStringToColor(WarbandCasualtyLog.SubModule.DefaultAllyUnconscious);
         }
 
         private static Color GetColor(Agent killed, bool isUnconscious)

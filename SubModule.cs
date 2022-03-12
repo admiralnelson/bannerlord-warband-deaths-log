@@ -24,16 +24,17 @@ namespace WarbandCasualtyLog
 {
     public class SubModule : MBSubModuleBase
     {
-        public static bool invalidConfigFlag = false;
-
+        public static readonly string DefaultFriendlyKill = "#9AD7B4FF";
+        public static readonly string DefaultFriendlyKilled = "#AF6353FF";
+        public static readonly string DefaultFriendlyUnconscious = "#FFA862FF";
+        public static readonly string DefaultAllyUnconscious = "#EEA4FFFF";
+        public static readonly string DefaultAllyKilled = "#F11CB5FF";
         protected override void OnSubModuleLoad()
         {
             base.OnSubModuleLoad();
-            WarbandConfig.Initialize();
-            var harmony = new Harmony("top.hirtol.warbandcasualty.patch");
+            var harmony = new Harmony("org.calradia.admiralnelson.warbandkillfeed");
             harmony.PatchAll();
-            LogPatch.loadConfigValues();
-            WarbandConfig.Save();
+            LogPatch.LoadConfigValues();
         }
 
         protected override void OnGameStart(Game game, IGameStarter gameStarterObject)
@@ -41,18 +42,6 @@ namespace WarbandCasualtyLog
 
         }
 
-        protected override void OnSubModuleUnloaded()
-        {
-            WarbandConfig.Save();
-        }
-
-        protected override void OnApplicationTick(float dt)
-        {
-            if (invalidConfigFlag)
-            {
-                InformationManager.DisplayMessage(new InformationMessage("Invalid value(s) in Warband Casualty Log Config, please reconfigure!"));
-            }
-        }
     }
 
     
